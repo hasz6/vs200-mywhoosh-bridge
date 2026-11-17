@@ -3,7 +3,7 @@
 Lekka aplikacja na system Windows umożliwiająca bezpośrednie połączenie bezprzewodowego kontrolera **ThinkRider VS200** (BLE GATT) z grą **MyWhoosh** w celu obsługi wirtualnej zmiany biegów (MyShift: klawisze `I` oraz `K`).
 
 > ⚠️ **WAŻNA INFORMACJA O ZGODNOŚCI:**
-> - Aplikacja została **potwierdzona i przetestowana wyłącznie z kontrolerem ThinkRider VS200 oraz grą MyWhoosh**.
+> - Aplikacja została **potwierdzona i przetestowana wyłącznie z kontrolerem ThinkRider VS200 oraz MyWhoosh**.
 > - Rozwiązanie **NIE było testowane z platformą Zwift**.
 
 ---
