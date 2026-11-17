@@ -1,0 +1,20 @@
+{
+  "device_name": "VS200",
+  "device_address": "XX:XX:XX:XX:XX:XX",
+  "notify_characteristic_uuid": "0000fea1-0000-1000-8000-00805f9b34fb",
+  "mappings": {
+    "shift_up": {
+      "ble_payload_hex": "f3050301fc",
+      "key_name": "k",
+      "scan_code": 37
+    },
+    "shift_down": {
+      "ble_payload_hex": "f3050300fb",
+      "key_name": "i",
+      "scan_code": 23
+    }
+  },
+  "debounce_ms": 80,
+  "only_when_mywhoosh_active": true,
+  "target_window_title": "MyWhoosh"
+}

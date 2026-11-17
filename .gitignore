@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec
+
+# Środowiska wirtualne
+.venv/
+venv/
+env/
+
+# Budowanie PyInstaller (ignorujemy katalog tymczasowy build, ale ZACHOWUJEMY dist ze skompilowanym .exe)
+build/
+
+# Prywatna konfiguracja z adresem MAC kontrolera (używamy config.example.json)
+config.json
+dist/config.json
+
+# IDE / Edytory
+.vscode/
+.idea/
+*.swp
