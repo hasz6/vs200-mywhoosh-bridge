@@ -1,6 +1,6 @@
 """
 tray.py — Obsługa aplikacji w zasobniku systemowym Windows (System Tray).
-Wykorzystuje pystray oraz Pillow do dynamicznych ikonek statusu.
+Wyświetla stan połączenia, poziom baterii i wysyła powiadomienia, gdy bateria < 30%.
 """
 
 from __future__ import annotations
@@ -41,6 +41,8 @@ class TrayApp:
         self.config_path = config_path
         self.current_state = "initializing"
         self.status_text = "Inicjalizacja..."
+        self.battery_level: int | None = None
+        self._low_battery_notified = False  # Zapobiega spamowaniu powiadomieniami
         self.bridge: VS200Bridge | None = None
         self.loop: asyncio.AbstractEventLoop | None = None
         self.worker_thread: threading.Thread | None = None
@@ -76,23 +78,51 @@ class TrayApp:
                 if enabled:
                     winreg.DeleteValue(key, APP_NAME)
                 else:
-                    # Ścieżka do aktualnego pliku wykonywalnego
                     exe_path = sys.executable if getattr(sys, "frozen", False) else f'"{sys.executable}" "{Path(__file__).resolve().parent.parent / "tray_main.py"}"'
                     winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, exe_path)
         except Exception as e:
             print(f"Błąd zmiany autostartu: {e}")
 
     # -------------------------------------------------------------
-    # Status callback
+    # Status i Bateria callback
     # -------------------------------------------------------------
 
-    def on_ble_status(self, state: str, message: str) -> None:
+    def on_ble_status(self, state: str, message: str, battery: int | None = None) -> None:
         self.current_state = state
         self.status_text = message
+        if battery is not None:
+            self.battery_level = battery
+
+        # Budowanie tooltipu po najechaniu myszką
+        tooltip_parts = [f"VS200: {message}"]
+        if self.battery_level is not None:
+            tooltip_parts.append(f"Bateria: {self.battery_level}%")
+        tooltip = " | ".join(tooltip_parts)
+
         if self.icon:
             img = self.icons.get(state, self.icons["default"])
             self.icon.icon = img
-            self.icon.title = f"VS200: {message}"
+            self.icon.title = tooltip[:127]  # Limit Windows tooltip
+
+            # Powiadomienie o niskim poziomie baterii (< 30%)
+            if state == "connected" and self.battery_level is not None:
+                if self.battery_level < 30 and not self._low_battery_notified:
+                    self._low_battery_notified = True
+                    try:
+                        self.icon.notify(
+                            title="⚠️ Niski poziom baterii VS200",
+                            message=f"Poziom naładowania wynosi tylko {self.battery_level}%. Zalecana wymiana baterii CR2032 przed treningiem!",
+                        )
+                    except Exception:
+                        pass
+                elif self.battery_level >= 30:
+                    self._low_battery_notified = False
+
+            # Odświeżenie menu
+            try:
+                self.icon.update_menu()
+            except Exception:
+                pass
 
     # -------------------------------------------------------------
     # Pętla wątku BLE
@@ -128,14 +158,24 @@ class TrayApp:
             self.icon.stop()
 
     def run(self) -> None:
-        # Start wątku BLE
         self.worker_thread = threading.Thread(target=self._run_ble_loop, daemon=True)
         self.worker_thread.start()
+
+        def get_battery_label(_=None) -> str:
+            if self.battery_level is not None:
+                icon = "🪫" if self.battery_level < 30 else "🔋"
+                return f"{icon} Bateria: {self.battery_level}%"
+            return "🔋 Bateria: brak danych"
 
         def make_menu():
             return pystray.Menu(
                 pystray.MenuItem(
-                    lambda text: f"Status: {self.status_text}",
+                    lambda text: f"Stan: {self.status_text}",
+                    None,
+                    enabled=False,
+                ),
+                pystray.MenuItem(
+                    get_battery_label,
                     None,
                     enabled=False,
                 ),

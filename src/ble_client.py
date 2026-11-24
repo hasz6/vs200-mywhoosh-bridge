@@ -1,6 +1,6 @@
 """
 ble_client.py — Główna pętla BLE: połączenie, subskrypcja GATT,
-                auto-reconnect po uśpieniu kontrolera.
+                auto-reconnect po uśpieniu kontrolera, odczyt poziomu baterii.
 """
 
 from __future__ import annotations
@@ -11,10 +11,13 @@ from typing import Any, Callable
 
 from bleak import BleakClient, BleakScanner
 from bleak.backends.characteristic import BleakGATTCharacteristic
+from bleak.backends.device import BLEDevice
 
 from .mapper import ButtonMapper
 
 logger = logging.getLogger(__name__)
+
+BATTERY_LEVEL_UUID = "00002a19-0000-1000-8000-00805f9b34fb"
 
 
 class VS200Bridge:
@@ -23,21 +26,43 @@ class VS200Bridge:
     def __init__(
         self,
         cfg: dict[str, Any],
-        status_callback: Callable[[str, str], None] | None = None,
+        status_callback: Callable[[str, str, int | None], None] | None = None,
     ):
         self.address: str = cfg["device_address"]
         self.char_uuid: str = cfg["notify_characteristic_uuid"]
         self.mapper = ButtonMapper.from_config(cfg)
         self.status_callback = status_callback
+        self.battery_level: int | None = None
         self._disconnect_event = asyncio.Event()
         self._running = True
 
-    def _set_status(self, state: str, message: str) -> None:
+    def _set_status(self, state: str, message: str, battery: int | None = None) -> None:
+        if battery is not None:
+            self.battery_level = battery
         if self.status_callback:
             try:
-                self.status_callback(state, message)
+                self.status_callback(state, message, self.battery_level)
             except Exception:
                 pass
+
+    # ------------------------------------------------------------------
+    # Odczyt baterii
+    # ------------------------------------------------------------------
+
+    async def read_battery(self, client: BleakClient) -> int | None:
+        """Odczytuje poziom baterii (0-100%) z charakterystyki 0x2A19."""
+        try:
+            val = await client.read_gatt_char(BATTERY_LEVEL_UUID)
+            pct = int(val[0])
+            self.battery_level = pct
+            if pct < 30:
+                logger.warning("⚠️ NISKI POZIOM BATERII VS200: %d%%! (Zalecana wymiana CR2032)", pct)
+            else:
+                logger.info("🔋 Poziom baterii VS200: %d%%", pct)
+            return pct
+        except Exception as e:
+            logger.debug("Nie udało się odczytać baterii: %s", e)
+            return None
 
     # ------------------------------------------------------------------
     # Callbacki
@@ -56,15 +81,15 @@ class VS200Bridge:
     # Połączenie i subskrypcja
     # ------------------------------------------------------------------
 
-    async def _connect_and_subscribe(self) -> None:
-        """Jedno podłączenie: łączy i od razu subskrybuje."""
+    async def _connect_and_subscribe(self, device_or_address: BLEDevice | str) -> None:
+        """Jedno podłączenie: łączy, odczytuje baterię i subskrybuje notyfikacje."""
         self._disconnect_event.clear()
 
         logger.info("Łączenie z %s…", self.address)
         self._set_status("connecting", f"Łączenie z {self.address}…")
 
         async with BleakClient(
-            self.address,
+            device_or_address,
             disconnected_callback=self._on_disconnect,
             timeout=15.0,
         ) as client:
@@ -74,9 +99,12 @@ class VS200Bridge:
                 return
 
             logger.info("✓ Połączono z %s", self.address)
-            self._set_status("connected", "Połączono — kontroler aktywny")
 
-            # Subskrypcja bezpośrednia
+            # Odczyt baterii zaraz po połączeniu
+            batt = await self.read_battery(client)
+            self._set_status("connected", "Połączono — kontroler aktywny", batt)
+
+            # Subskrypcja przycisków
             await client.start_notify(self.char_uuid, self._on_notification)
             logger.info(
                 "🔔 Nasłuch aktywny na UUID %s — kontroler gotowy!",
@@ -90,10 +118,10 @@ class VS200Bridge:
     # Auto-reconnect loop
     # ------------------------------------------------------------------
 
-    async def _wait_for_device(self, interval: float = 2.0) -> None:
-        """Pasywne czekanie na ponowne pojawienie się VS200 w ogłoszeniach BLE."""
+    async def _wait_for_device(self, interval: float = 2.0) -> BLEDevice | None:
+        """Pasywne czekanie na wybudzenie VS200."""
         logger.info("🔍 Oczekiwanie na kliknięcie przycisku na VS200…")
-        self._set_status("sleeping", "Oczekiwanie na kliknięcie przycisku VS200…")
+        self._set_status("sleeping", "Oczekiwanie na wybudzenie (kliknij przycisk)")
 
         while self._running:
             device = await BleakScanner.find_device_by_address(
@@ -101,8 +129,9 @@ class VS200Bridge:
             )
             if device is not None:
                 logger.info("📡 VS200 wybudzony — nawiązuję sesję…")
-                return
+                return device
             await asyncio.sleep(0.3)
+        return None
 
     async def run_forever(self) -> None:
         """Główna pętla: łącz → nasłuchuj → po rozłączeniu czekaj → łącz ponownie."""
@@ -110,9 +139,15 @@ class VS200Bridge:
         logger.info("Adres: %s | Characteristic: %s", self.address, self.char_uuid)
         logger.info("Ctrl+C aby zakończyć.\n")
 
+        # Pierwsze znalezienie urządzenia
+        device: BLEDevice | str = self.address
+        found = await BleakScanner.find_device_by_address(self.address, timeout=4.0)
+        if found:
+            device = found
+
         while self._running:
             try:
-                await self._connect_and_subscribe()
+                await self._connect_and_subscribe(device)
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -125,7 +160,9 @@ class VS200Bridge:
 
             # Czekaj na wybudzenie
             try:
-                await self._wait_for_device()
+                fresh_dev = await self._wait_for_device()
+                if fresh_dev is not None:
+                    device = fresh_dev
             except asyncio.CancelledError:
                 break
 

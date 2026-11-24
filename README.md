@@ -12,6 +12,11 @@ Lekka aplikacja na system Windows umożliwiająca bezpośrednie połączenie bez
 
 - **Brak pośredników**: Łączy się bezpośrednio z adapterem Bluetooth w PC, bez udziału trenażera.
 - **Wsparcie dla Unreal Engine (DirectInput / ScanCodes)**: Używa niskopoziomowych kodów skanowania Win32 (`user32.SendInput`), dzięki czemu silnik MyWhoosh poprawnie rejestruje wciśnięcia klawiszy.
+- **Monitorowanie stanu baterii**:
+  - Odczytuje standardową charakterystykę Bluetooth SIG: `0x2A19` (Battery Level).
+  - W konsoli: flaga `--battery` oraz bieżące logowanie poziomu naładowania przy każdym połączeniu.
+  - W zasobniku (Tray): stan baterii widoczny w podpowiedzi po najechaniu kursorem na ikonkę oraz w menu.
+  - **Ostrzeżenie o niskiej baterii**: Automatyczne powiadomienie dymkowe w Windowsie, gdy poziom baterii spadnie **poniżej 30%** (zalecana wymiana baterii CR2032).
 - **Wbudowany kreator konfiguracji**:
   - `--discover`: automatyczne skanowanie i wykrywanie kontrolera VS200.
   - `--calibrate`: automatyczne rozpoznawanie kodów przycisków `[+]` oraz `[-]`.
@@ -29,10 +34,10 @@ Lekka aplikacja na system Windows umożliwiająca bezpośrednie połączenie bez
 
 W katalogu `dist/` znajduje się skompilowany plik: `VS200-MyWhoosh-Bridge.exe`.
 
-1. Skopiuj plik `config.example.json` jako `config.json` obok pliku `.exe`.
-2. Uzupełnij adres MAC urządzenia (lub przeprowadź jednorazową kalibrację skryptem Python).
-3. Uruchom `VS200-MyWhoosh-Bridge.exe` (program poprosi o uprawnienia administratora, co jest wymagane do wstrzykiwania klawiszy do gier).
-4. Kliknij przycisk na kontrolerze VS200 – ikonka w zasobniku zmieni kolor na zielony.
+1. Skopiuj plik `config.example.json` jako `config.json` obok pliku `.exe` (lub użyj skryptu konfiguracyjnego).
+2. Uruchom `VS200-MyWhoosh-Bridge.exe` (program poprosi o uprawnienia administratora, co jest wymagane do wstrzykiwania klawiszy do gier).
+3. Kliknij przycisk na kontrolerze VS200 – ikonka w zasobniku zmieni kolor na zielony.
+4. Najedź myszką na ikonkę, aby zobaczyć aktualny status i poziom baterii (np. `VS200: Połączono | Bateria: 31%`).
 
 ---
 
@@ -47,23 +52,14 @@ W katalogu `dist/` znajduje się skompilowany plik: `VS200-MyWhoosh-Bridge.exe`.
 pip install -r requirements.txt
 ```
 
-### Pierwsza konfiguracja
-1. **Wykrycie kontrolera**:
-   ```bash
-   python main.py --discover
-   ```
-   (Wybierz kontroler z listy; adres zostanie zapisany do `config.json`).
-
-2. **Kalibracja przycisków**:
-   ```bash
-   python main.py --calibrate
-   ```
-   (Postępuj zgodnie z instrukcjami na ekranie, wciskając `[+]` i `[-]`).
-
-3. **Uruchomienie bridge'a**:
-   ```bash
-   python main.py --run
-   ```
+### Dostępne komendy:
+```bash
+python main.py --discover     # Wykryj kontroler i zapisz MAC do config.json
+python main.py --calibrate    # Skalibruj przyciski [+] i [-]
+python main.py --battery      # Sprawdź poziom naładowania baterii kontrolera
+python main.py --run          # Uruchom bridge w konsoli
+python main.py --test-keys    # Test wstrzykiwania klawiszy w Notatniku
+```
 
 ---
 
@@ -81,4 +77,4 @@ pip install -r requirements.txt
 
 ## 📄 Licencja
 
-Projekt udostępniany na darmowej, otwartej licencji MIT (szczegóły w pliku `LICENSE`).
+Projekt udostępniany na darmowej, otwartej licencji MIT.
