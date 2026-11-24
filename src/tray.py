@@ -111,7 +111,7 @@ class TrayApp:
                     try:
                         self.icon.notify(
                             title="⚠️ Niski poziom baterii VS200",
-                            message=f"Poziom naładowania wynosi tylko {self.battery_level}%. Zalecana wymiana baterii CR2032 przed treningiem!",
+                            message=f"Poziom naładowania wynosi tylko {self.battery_level}%. Zalecane naładowanie kontrolera przed treningiem!",
                         )
                     except Exception:
                         pass

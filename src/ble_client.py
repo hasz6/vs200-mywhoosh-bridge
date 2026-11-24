@@ -56,7 +56,7 @@ class VS200Bridge:
             pct = int(val[0])
             self.battery_level = pct
             if pct < 30:
-                logger.warning("⚠️ NISKI POZIOM BATERII VS200: %d%%! (Zalecana wymiana CR2032)", pct)
+                logger.warning("⚠️ NISKI POZIOM BATERII VS200: %d%%! (Zalecane naładowanie)", pct)
             else:
                 logger.info("🔋 Poziom baterii VS200: %d%%", pct)
             return pct

@@ -16,7 +16,7 @@ Lekka aplikacja na system Windows umożliwiająca bezpośrednie połączenie bez
   - Odczytuje standardową charakterystykę Bluetooth SIG: `0x2A19` (Battery Level).
   - W konsoli: flaga `--battery` oraz bieżące logowanie poziomu naładowania przy każdym połączeniu.
   - W zasobniku (Tray): stan baterii widoczny w podpowiedzi po najechaniu kursorem na ikonkę oraz w menu.
-  - **Ostrzeżenie o niskiej baterii**: Automatyczne powiadomienie dymkowe w Windowsie, gdy poziom baterii spadnie **poniżej 30%** (zalecana wymiana baterii CR2032).
+  - **Ostrzeżenie o niskiej baterii**: Automatyczne powiadomienie dymkowe w Windowsie, gdy poziom baterii spadnie **poniżej 30%** (zalecane naładowanie kontrolera).
 - **Wbudowany kreator konfiguracji**:
   - `--discover`: automatyczne skanowanie i wykrywanie kontrolera VS200.
   - `--calibrate`: automatyczne rozpoznawanie kodów przycisków `[+]` oraz `[-]`.

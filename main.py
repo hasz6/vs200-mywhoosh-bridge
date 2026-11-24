@@ -99,7 +99,7 @@ async def cmd_battery() -> None:
             pct = int(val[0])
             print(f"\n🔋 Poziom baterii: {pct}%")
             if pct < 30:
-                print("⚠️ UWAGA: Poziom baterii poniżej 30%! Zalecana wymiana baterii CR2032.")
+                print("⚠️ UWAGA: Poziom baterii poniżej 30%! Zalecane naładowanie kontrolera.")
             else:
                 print("✓ Stan baterii prawidłowy.")
     except Exception as e:
